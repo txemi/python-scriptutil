@@ -45,20 +45,27 @@ Module providing functions commonly used in shell scripting:
 Please see the documentation strings of the particular functions for
 detailed information.
 """
-from builtins import str
-from builtins import zip
-from builtins import filter
-from builtins import map
 
 # Copyright: (c) 2007 Muharem Hrnjadovic
 # created: 15/04/2007 09:31:25
 
+import fnmatch
+import itertools
+import os
+import re
+import sys
+from builtins import filter
+from builtins import map
+from builtins import str
+from builtins import zip
+
 __version__ = "$Id:$"
 # $HeadURL $
 
-import os, sys, types, re, fnmatch, itertools
+
 
 class ScriptError(Exception): pass
+
 
 def ffind(path, shellglobs=None, namefs=None, relative=True):
     """
@@ -91,7 +98,7 @@ def ffind(path, shellglobs=None, namefs=None, relative=True):
     if not os.access(path, os.R_OK):
         raise ScriptError("cannot access path: '%s'" % path)
 
-    fileList = [] # result list
+    fileList = []  # result list
     try:
         for dir, subdirs, files in os.walk(path):
             if shellglobs:
@@ -103,12 +110,14 @@ def ffind(path, shellglobs=None, namefs=None, relative=True):
             else:
                 fileList.extend(['%s%s%s' % (dir, os.sep, f) for f in files])
         if not relative: fileList = list(map(os.path.abspath, fileList))
-        if namefs: 
+        if namefs:
             for ff in namefs: fileList = list(filter(ff, fileList))
-    except Exception as e: raise ScriptError(str(e))
-    return(fileList)
+    except Exception as e:
+        raise ScriptError(str(e))
+    return (fileList)
 
-def ffindgrep(path, regexl, shellglobs=None, namefs=None, 
+
+def ffindgrep(path, regexl, shellglobs=None, namefs=None,
               relative=True, linenums=False):
     """
     Finds files in the directory tree starting at 'path' (filtered by
@@ -140,7 +149,7 @@ def ffindgrep(path, regexl, shellglobs=None, namefs=None,
       - key is the file name and the
       - value is a string with lines filtered by 'regexl'
     """
-    fileList = ffind(path, shellglobs=shellglobs, 
+    fileList = ffind(path, shellglobs=shellglobs,
                      namefs=namefs, relative=relative)
     if not fileList: return dict()
 
@@ -150,7 +159,7 @@ def ffindgrep(path, regexl, shellglobs=None, namefs=None,
         # first compile the regular expressions
         ffuncs = []
         for redata in regexl:
-            if type(redata) == bytes:
+            if type(redata) == bytes or isinstance(redata, str):
                 ffuncs.append(re.compile(redata).search)
             elif type(redata) == tuple:
                 ffuncs.append(re.compile(*redata).search)
@@ -161,11 +170,15 @@ def ffindgrep(path, regexl, shellglobs=None, namefs=None,
             fcontent = fhandle.read()
             fhandle.close()
             # split file content in lines
-            if linenums: lines = list(zip(itertools.count(1), fcontent.splitlines()))
-            else: lines = fcontent.splitlines()
+            if linenums:
+                lines = list(zip(itertools.count(1), fcontent.splitlines()))
+            else:
+                lines = fcontent.splitlines()
             for ff in ffuncs:
-                if linenums: lines = [t for t in lines if ff(t[1])]
-                else: lines = list(filter(ff, lines))
+                if linenums:
+                    lines = [t for t in lines if ff(t[1])]
+                else:
+                    lines = list(filter(ff, lines))
                 # there's no point in applying the remaining regular
                 # expressions if we don't have any matching lines any more
                 if not lines: break
@@ -177,8 +190,10 @@ def ffindgrep(path, regexl, shellglobs=None, namefs=None,
                         result[file] = '\n'.join(["%d:%s" % t for t in lines])
                     else:
                         result[file] = '\n'.join(map(str, lines))
-    except Exception as e: raise ScriptError(str(e))
-    return(result)
+    except Exception as e:
+        raise ScriptError(str(e))
+    return (result)
+
 
 def freplace(path, regexl, shellglobs=None, namefs=None, bext='.bak'):
     """
@@ -225,8 +240,10 @@ def freplace(path, regexl, shellglobs=None, namefs=None, bext='.bak'):
         for searchs, replaces, reflags in regexl:
             # prepare the required regex objects, check whether we need
             # to pass any regex compilation flags
-            if reflags is not None: regex = re.compile(searchs, reflags)
-            else: regex = re.compile(searchs)
+            if reflags is not None:
+                regex = re.compile(searchs, reflags)
+            else:
+                regex = re.compile(searchs)
             cffl.append((regex.subn, replaces))
         for file in fileList:
             # read file content
@@ -248,10 +265,12 @@ def freplace(path, regexl, shellglobs=None, namefs=None, bext='.bak'):
                 fhandle.write(text)
                 fhandle.close()
                 filesChanged += 1
-    except Exception as e: raise ScriptError(str(e))
+    except Exception as e:
+        raise ScriptError(str(e))
 
     # return the number of files that had some of their content changed
-    return(filesChanged)
+    return (filesChanged)
+
 
 def printr(results):
     """
@@ -260,10 +279,11 @@ def printr(results):
     """
     if type(results) == dict:
         for f in sorted(results.keys()):
-            sys.stdout.write("%s\n%s\n" % (results[f],f))
+            sys.stdout.write("%s\n%s\n" % (results[f], f))
     else:
         for f in sorted(results):
             sys.stdout.write("%s\n" % f)
+
 
 if __name__ == '__main__':
     pass
